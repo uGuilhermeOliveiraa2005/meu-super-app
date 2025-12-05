@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Terminal } from 'xterm';
-import { FitAddon } from 'xterm-addon-fit';
-import 'xterm/css/xterm.css'; // Importa o estilo visual
+import { FitAddon } from '@xterm/addon-fit'; // Melhor usar o pacote oficial atualizado
+import 'xterm/css/xterm.css';
 
 function App() {
   const terminalRef = useRef(null);
@@ -19,37 +19,57 @@ function App() {
     term.loadAddon(fitAddon);
 
     term.open(terminalRef.current);
+    
+    // Ajuste inicial (importante!)
     fitAddon.fit();
 
     // 2. Conecta com a "Cozinha" (Backend)
     const socket = new WebSocket('ws://localhost:3000/ws/terminal');
 
-    // Quando conectar, avisa na tela
     socket.onopen = () => {
       term.write('\r\n\x1b[32m Conectado ao seu PC! Tente digitar "dir" ou "ls" \x1b[0m\r\n\r\n$ ');
+      
+      // AVISA O BACKEND DO TAMANHO INICIAL ASSIM QUE CONECTAR
+      const dims = { cols: term.cols, rows: term.rows };
+      socket.send(JSON.stringify({ type: 'resize', ...dims }));
     };
 
-    // Recebe a resposta do computador e mostra na tela
     socket.onmessage = (event) => {
       term.write(event.data);
     };
 
-    // Pega o que você digita e manda para o computador
     term.onData((data) => {
-      socket.send(data);
+      // Envia como JSON para o backend saber que é input de texto
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'input', data: data }));
+      }
     });
 
-    // Ajusta o tamanho se redimensionar a janela
-    window.addEventListener('resize', () => fitAddon.fit());
+    // 3. Lógica de Redimensionamento Inteligente
+    const handleResize = () => {
+      fitAddon.fit(); // Ajusta o visual no navegador
+      
+      // E AVISA O SERVIDOR DAS NOVAS MEDIDAS
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ 
+          type: 'resize', 
+          cols: term.cols, 
+          rows: term.rows 
+        }));
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
 
     return () => {
+      window.removeEventListener('resize', handleResize);
       socket.close();
       term.dispose();
     };
   }, []);
 
   return (
-    <div style={{ width: '100vw', height: '100vh', backgroundColor: '#000', padding: '10px', boxSizing: 'border-box' }}>
+    <div style={{ width: '100vw', height: '100vh', backgroundColor: '#1e1e1e', padding: '10px', boxSizing: 'border-box' }}>
       <div ref={terminalRef} style={{ width: '100%', height: '100%' }} />
     </div>
   );
