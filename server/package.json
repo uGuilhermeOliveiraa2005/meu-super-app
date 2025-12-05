@@ -1,0 +1,20 @@
+{
+  "name": "server",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@fastify/cors": "^11.1.0",
+    "@fastify/websocket": "^11.2.0",
+    "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1",
+    "cross-spawn": "^7.0.6",
+    "fastify": "^5.6.2"
+  }
+}
